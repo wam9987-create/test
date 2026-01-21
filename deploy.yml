@@ -1,0 +1,28 @@
+---
+- name: web_dep 자동 배포 플레이북
+  hosts: webservers
+  become: true
+  vars:
+    # 본인의 GitHub 저장소 주소로 변경
+    git_repo_url: "https://github.com/wam9987-create/test.git"
+    web_root: "/var/www/html"
+
+  tasks:
+    - name: Nginx 웹 서버 설치
+      apt:
+        name: nginx
+        state: present
+        update_cache: yes
+
+    - name: GitHub 저장소에서 최신 소스 코드 배포
+      git:
+        repo: "{{ git_repo_url }}"
+        dest: "{{ web_root }}"
+        version: main
+        force: yes
+
+    - name: Nginx 서비스 활성화 및 시작
+      service:
+        name: nginx
+        state: started
+        enabled: true
