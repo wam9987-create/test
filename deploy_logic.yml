@@ -1,0 +1,45 @@
+---
+- name: 웹 엔진 및 서비스 통합 배포 파이프라인
+  hosts: webservers
+  become: true
+  tasks:
+    - name: 1. GitHub 저장소 최종본 임시 클론
+      git:
+        repo: "https://github.com/wam9987-create/test.git"
+        dest: "/tmp/web_dep_final"
+        version: main
+        force: yes
+
+    - name: 2. 웹 엔진 설치 (GitHub 내 스크립트 실행)
+      # 스크립트 내용만 바꾸면 Nginx에서 다른 엔진으로 즉시 교체 가능
+      shell: "bash /tmp/web_dep_final/setup/install_engine.sh"
+
+    - name: 3. 커스텀 엔진 설정 파일 적용
+      copy:
+        src: "/tmp/web_dep_final/nginx/default.conf"
+        dest: "/etc/nginx/sites-available/default"
+        remote_src: yes
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reload Engine
+
+    - name: 4. webdev 콘텐츠 배포
+      copy:
+        src: "/tmp/web_dep_final/webdev/"
+        dest: "/var/www/html/"
+        remote_src: yes
+        owner: www-data
+        group: www-data
+        mode: '0644'
+
+    - name: 5. 임시 디렉토리 정리
+      file:
+        path: "/tmp/web_dep_final"
+        state: absent
+
+  handlers:
+    - name: Reload Engine
+      service:
+        name: nginx
+        state: reloaded
